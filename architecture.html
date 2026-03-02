@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Persistent Agent Memory Architecture v2</title>
+  <style>
+    :root {
+      --bg: #0a0c10;
+      --surface: #111318;
+      --surface2: #1a1d24;
+      --border: #2a2d36;
+      --accent: #00d4ff;
+      --accent2: #7c3aed;
+      --accent3: #10b981;
+      --accent4: #f59e0b;
+      --text: #e2e8f0;
+      --text-muted: #8892a4;
+      --code-bg: #0d1117;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #0a0c10 0%, #111827 50%, #0f1923 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 0 40px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 300px;
+      background: radial-gradient(ellipse, rgba(0,212,255,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .header-badge {
+      display: inline-block;
+      background: rgba(0,212,255,0.1);
+      border: 1px solid rgba(0,212,255,0.3);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+    .header-meta {
+      color: var(--text-muted);
+      font-size: 13px;
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .header-meta span { display: flex; align-items: center; gap: 6px; }
+
+    /* Layout */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+
+    /* Nav */
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 28px;
+      margin-bottom: 48px;
+    }
+    .toc h3 {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+    .toc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 8px;
+    }
+    .toc a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      display: block;
+    }
+    .toc a:hover { background: var(--surface2); color: var(--text); }
+
+    /* Sections */
+    section { margin-bottom: 56px; }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .section-num {
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin: 24px 0 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 12px;
+    }
+
+    p { color: var(--text-muted); margin-bottom: 14px; }
+    p strong { color: var(--text); }
+
+    /* Principles */
+    .principles {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .principle {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .principle strong { color: var(--text); display: block; margin-bottom: 4px; }
+
+    /* Layer cards */
+    .layer-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    .layer-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .layer-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .layer-icon.db { background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3); }
+    .layer-icon.mem { background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.2); }
+    .layer-icon.brain { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); }
+    .layer-icon.boot { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); }
+
+    .layer-title { font-size: 1.1rem; font-weight: 700; color: #fff; }
+    .layer-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* Tables */
+    .table-wrap { overflow-x: auto; margin: 16px 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead tr { background: var(--surface2); }
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    td code, th code { background: var(--code-bg); color: var(--accent); padding: 2px 6px; border-radius: 4px; font-size: 12px; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    td strong { color: var(--text); }
+    .tag-new {
+      display: inline-block;
+      background: rgba(16,185,129,0.15);
+      border: 1px solid rgba(16,185,129,0.3);
+      color: var(--accent3);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 10px;
+      letter-spacing: 0.5px;
+      margin-left: 6px;
+    }
+    .tag-keep {
+      display: inline-block;
+      background: rgba(100,116,139,0.15);
+      border: 1px solid rgba(100,116,139,0.3);
+      color: #64748b;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 10px;
+      letter-spacing: 0.5px;
+      margin-left: 6px;
+    }
+
+    /* Code */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 18px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 12.5px;
+      color: #c9d1d9;
+      margin: 14px 0;
+      line-height: 1.6;
+    }
+    code {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 12.5px;
+      background: var(--code-bg);
+      color: var(--accent);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    pre code { background: none; color: inherit; padding: 0; border-radius: 0; }
+
+    /* Dir tree */
+    .dir-tree {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 12.5px;
+      line-height: 1.8;
+      color: #c9d1d9;
+    }
+    .dir-tree .dir { color: var(--accent); }
+    .dir-tree .comment { color: #6e7681; }
+
+    /* Agent map */
+    .agent-map {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .agent-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .agent-id {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .agent-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+    .agent-files { display: flex; flex-wrap: wrap; gap: 4px; }
+    .agent-file {
+      background: rgba(124,58,237,0.12);
+      border: 1px solid rgba(124,58,237,0.2);
+      color: #a78bfa;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Phases */
+    .phases { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+    .phase {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .phase::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 100%;
+    }
+    .phase.p1::before { background: var(--accent2); }
+    .phase.p2::before { background: var(--accent); }
+    .phase.p3::before { background: var(--accent3); }
+    .phase.p4::before { background: var(--accent4); }
+    .phase-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .phase.p1 .phase-label { color: var(--accent2); }
+    .phase.p2 .phase-label { color: var(--accent); }
+    .phase.p3 .phase-label { color: var(--accent3); }
+    .phase.p4 .phase-label { color: var(--accent4); }
+    .phase-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+    .phase ul { list-style: none; }
+    .phase ul li {
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 3px 0;
+      padding-left: 14px;
+      position: relative;
+    }
+    .phase ul li::before { content: '→'; position: absolute; left: 0; color: #4b5563; }
+
+    /* Cost table */
+    .cost-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .cost-item { text-align: center; }
+    .cost-value { font-size: 1.6rem; font-weight: 800; color: var(--accent3); }
+    .cost-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .cost-divider { width: 1px; height: 50px; background: var(--border); }
+
+    /* Protocol steps */
+    .steps { display: flex; flex-direction: column; gap: 10px; }
+    .step {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .step-num {
+      background: var(--accent2);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step-content { font-size: 13px; color: var(--text-muted); }
+    .step-content strong { color: var(--text); }
+
+    /* Questions */
+    .questions { display: flex; flex-direction: column; gap: 10px; }
+    .question {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      font-size: 13px;
+    }
+    @media (max-width: 600px) { .question { grid-template-columns: 1fr; } }
+    .q-text { color: var(--text); font-weight: 600; }
+    .q-rec { color: var(--accent3); font-size: 12px; }
+    .q-rec::before { content: '✓ '; }
+
+    /* Summary */
+    .summary-box {
+      background: linear-gradient(135deg, rgba(0,212,255,0.05), rgba(124,58,237,0.05));
+      border: 1px solid rgba(0,212,255,0.2);
+      border-radius: 12px;
+      padding: 28px 32px;
+    }
+    .summary-box p { color: var(--text-muted); font-size: 15px; line-height: 1.8; }
+    .summary-box p:last-child { margin-bottom: 0; }
+
+    /* Footer */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 1.8rem; }
+      .principles { grid-template-columns: 1fr; }
+      .phases { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 480px) {
+      .phases { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-badge">Architecture Doc</div>
+  <h1>Persistent Agent Memory v2</h1>
+  <div class="header-meta">
+    <span>🎩 Author: Theo</span>
+    <span>📅 March 1, 2026</span>
+    <span>🔖 Status: Design — Building Now</span>
+    <span>💡 Inspired by: Vadim Strizheus</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <h3>Contents</h3>
+    <div class="toc-grid">
+      <a href="#overview">→ Overview</a>
+      <a href="#principles">→ Design Principles</a>
+      <a href="#layer1">→ Layer 1: Databases</a>
+      <a href="#layer2">→ Layer 2: Agent Memory Dirs</a>
+      <a href="#layer3">→ Layer 3: Shared Brain</a>
+      <a href="#layer4">→ Layer 4: Boot Script</a>
+      <a href="#protocol">→ Write Protocol</a>
+      <a href="#questions">→ Open Questions</a>
+      <a href="#phases">→ Implementation Phases</a>
+      <a href="#cost">→ Token Cost</a>
+      <a href="#summary">→ Summary</a>
+    </div>
+  </div>
+
+  <!-- Overview -->
+  <section id="overview">
+    <h2><span class="section-num">0</span> Overview</h2>
+    <p>Today, agents on this stack start each session with limited context — loaded from workspace files, heartbeat state, and manual memory searches. While functional, this is brittle: agents repeat work, lose cross-session continuity, and have no structured way to hand off state to each other.</p>
+    <p>This architecture formalizes a <strong>4-layer persistent memory system</strong> that gives every agent a reliable context injection before it touches any task, and a disciplined write protocol after. The goal: <strong>agents that compound instead of reset.</strong></p>
+  </section>
+
+  <!-- Principles -->
+  <section id="principles">
+    <h2><span class="section-num">1</span> Design Principles</h2>
+    <div class="principles">
+      <div class="principle">
+        <strong>No middleware, no central server</strong>
+        Files and SQLite only. Same pattern that already works.
+      </div>
+      <div class="principle">
+        <strong>Build on existing infrastructure</strong>
+        QMD, session_recall.py, xchat-identity-registry.json. Don't reinvent what works.
+      </div>
+      <div class="principle">
+        <strong>Write after every task. Read before every task.</strong>
+        Enforced via AGENTS.md protocol, not code.
+      </div>
+      <div class="principle">
+        <strong>Per-agent scope + shared brain</strong>
+        Agents have private logs AND publish to shared state for cross-agent consumption.
+      </div>
+      <div class="principle">
+        <strong>Startup injection is automatic</strong>
+        Agents never start cold. The boot script runs before first inference.
+      </div>
+    </div>
+  </section>
+
+  <!-- Layer 1: Databases -->
+  <section id="layer1">
+    <h2><span class="section-num">2</span> Layer 1: Databases</h2>
+
+    <div class="layer-card">
+      <div class="layer-header">
+        <div class="layer-icon db">🗄️</div>
+        <div>
+          <div class="layer-title">SQLite Databases</div>
+          <div class="layer-subtitle">Structured persistent storage — no ORM, no server</div>
+        </div>
+      </div>
+
+      <h3>Existing — Keep As-Is</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Database</th><th>Location</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>x1_tokens.db</code> <span class="tag-keep">keep</span></td><td><code>data/x1_tokens.db</code></td><td>X1 token prices, pools, history</td></tr>
+            <tr><td><code>QMD index</code> <span class="tag-keep">keep</span></td><td><code>~/.local/share/qmd/</code></td><td>Semantic search across workspace — don't reinvent this</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>New Databases</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Database</th><th>Location</th><th>Key Tables</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>knowledge.db</code> <span class="tag-new">new</span></td>
+              <td><code>data/knowledge.db</code></td>
+              <td><code>chunks</code>, <code>kb_entities</code>, <code>kb_sources</code></td>
+              <td>Agent-dropped facts. Semantic retrieval via QMD — no re-inventing the embedding layer.</td>
+            </tr>
+            <tr>
+              <td><code>crm.db</code> <span class="tag-new">new</span></td>
+              <td><code>data/crm.db</code></td>
+              <td><code>contacts</code>, <code>interactions</code>, <code>outreach_log</code></td>
+              <td>Contact tracking across all channels (Telegram, xChat, WhatsApp). Never contact the same person twice without context.</td>
+            </tr>
+            <tr>
+              <td><code>social_analytics.db</code> <span class="tag-new">new</span></td>
+              <td><code>data/social_analytics.db</code></td>
+              <td><code>posts</code>, <code>performance</code></td>
+              <td>Tweet/post performance over time. SCRIBE analog reads this before writing. System learns what resonates.</td>
+            </tr>
+            <tr>
+              <td><code>llm_usage.db</code> <span class="tag-new">new</span></td>
+              <td><code>data/llm_usage.db</code></td>
+              <td><code>runs</code></td>
+              <td>Per-agent token and cost tracking. Every AI call logged: model, tokens, exact cost, agent ID.</td>
+            </tr>
+            <tr>
+              <td><code>agent_runs.db</code> <span class="tag-new">new</span></td>
+              <td><code>data/agent_runs.db</code></td>
+              <td><code>runs</code></td>
+              <td>Cron job and subagent execution history. Started, ended, status, summary.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Layer 2: Agent Memory Dirs -->
+  <section id="layer2">
+    <h2><span class="section-num">3</span> Layer 2: Per-Agent Memory Directories</h2>
+
+    <div class="layer-card">
+      <div class="layer-header">
+        <div class="layer-icon mem">📁</div>
+        <div>
+          <div class="layer-title">Agent Memory Dirs</div>
+          <div class="layer-subtitle">Private daily logs — agent appends after task, reads last 2 days before starting</div>
+        </div>
+      </div>
+
+      <h3>Directory Structure</h3>
+      <div class="dir-tree">
+<span class="dir">memory/agents/</span>
+  <span class="dir">theo-main/</span>              <span class="comment">← Main Telegram/DM agent</span>
+    2026-03-01.md
+    2026-02-28.md
+  <span class="dir">theo-xchat/</span>             <span class="comment">← xChat agent (workspace-xchat)</span>
+    2026-03-01.md
+  <span class="dir">cyberdyne-director/</span>     <span class="comment">← Cyberdyne group sessions</span>
+    2026-03-01.md
+  <span class="dir">vero-watcher/</span>           <span class="comment">← Vero markets cron agent</span>
+    2026-03-01.md
+  <span class="dir">x1-token-sync/</span>          <span class="comment">← Token DB hourly cron</span>
+    2026-03-01.md
+  <span class="dir">nightly-contemplation/</span>  <span class="comment">← Opus reflection cron</span>
+    2026-03-01.md
+  <span class="dir">x-scanner/</span>             <span class="comment">← X/Twitter intel cron</span>
+    2026-03-01.md
+      </div>
+
+      <h3>Log Entry Format</h3>
+      <pre>## [HH:MM HST] Task: &lt;short description&gt;
+- What was done
+- What was found / decided
+- What to watch for next time
+- Cross-agent writes: [list of shared brain files updated]</pre>
+
+      <p style="margin-top:12px"><strong>Existing per-user memory stays:</strong> <code>workspace-xchat/memory/users/{wallet-first-8}.md</code> — xChat agent continues writing here. Agent-level logs capture operational notes; user files capture relationship context. Both injected at startup.</p>
+    </div>
+  </section>
+
+  <!-- Layer 3: Shared Brain -->
+  <section id="layer3">
+    <h2><span class="section-num">4</span> Layer 3: Shared Brain Files</h2>
+
+    <div class="layer-card">
+      <div class="layer-header">
+        <div class="layer-icon brain">🧠</div>
+        <div>
+          <div class="layer-title">Shared Brain JSON Files</div>
+          <div class="layer-subtitle">Cross-agent communication layer — no sessions_send required for state handoffs</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>File</th><th>Owner</th><th>Readers</th><th>Content</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>intel-feed.json</code></td>
+              <td>x-scanner cron (2h)</td>
+              <td>Cyberdyne, main, SCRIBE</td>
+              <td>Hot X topics, trending X1 content, notable posts</td>
+            </tr>
+            <tr>
+              <td><code>xchat-handoffs.json</code></td>
+              <td>xChat agent</td>
+              <td>xChat agent (next session)</td>
+              <td>Per-wallet session summaries — what was discussed, pending, last response</td>
+            </tr>
+            <tr>
+              <td><code>cyberdyne-pulse.json</code></td>
+              <td>Cyberdyne sessions</td>
+              <td>All Cyberdyne-adjacent agents</td>
+              <td>Builder scores, active citizen projects, group mood, recent rulings</td>
+            </tr>
+            <tr>
+              <td><code>x1-ecosystem-state.json</code></td>
+              <td>Token sync cron</td>
+              <td>Any agent answering X1 questions</td>
+              <td>Token prices, new listings, bridge state, validator health snapshot</td>
+            </tr>
+            <tr>
+              <td><code>agent-handoffs.json</code></td>
+              <td>All agents</td>
+              <td>All agents</td>
+              <td>Active cross-agent task queue — requested by, status, context</td>
+            </tr>
+            <tr>
+              <td><code>outreach-log.json</code></td>
+              <td>Main + xChat agents</td>
+              <td>Main + xChat agents</td>
+              <td>Who we've contacted, platform, topic — prevents repeat outreach</td>
+            </tr>
+            <tr>
+              <td><code>content-vault.json</code></td>
+              <td>Main agent</td>
+              <td>SCRIBE analog, main agent</td>
+              <td>Approved posts, engagement results, style patterns that worked</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>JSON Schema Convention</h3>
+      <pre>{
+  "lastUpdatedBy": "&lt;agent-id&gt;",
+  "lastUpdatedAt": "&lt;ISO timestamp&gt;",
+  "schemaVersion": "1.0",
+  "entries": [
+    {
+      "timestamp": "2026-03-01T...",
+      "agent": "theo-main",
+      "content": "...",
+      "tags": ["x1", "ecosystem"]
+    }
+  ]
+}</pre>
+      <p>Max file size: <strong>500KB</strong>. If exceeded, agent archives old entries to <code>shared-brain/archive/</code> and starts fresh.</p>
+    </div>
+  </section>
+
+  <!-- Layer 4: Boot Script -->
+  <section id="layer4">
+    <h2><span class="section-num">5</span> Layer 4: Startup Injection (Boot Script)</h2>
+
+    <div class="layer-card">
+      <div class="layer-header">
+        <div class="layer-icon boot">⚡</div>
+        <div>
+          <div class="layer-title">boot_agent.py</div>
+          <div class="layer-subtitle">Runs before first inference — agents never start cold</div>
+        </div>
+      </div>
+
+      <h3>Boot Script Logic</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">Detect <strong>agent-id</strong> from env var <code>OPENCLAW_AGENT_ID</code> or CLI arg</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">Load <strong>agent identity file</strong>: <code>memory/agents/{agent-id}/IDENTITY.md</code> if exists</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-content">Read <strong>last 2 days</strong> of <code>memory/agents/{agent-id}/YYYY-MM-DD.md</code></div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-content">Load <strong>relevant shared brain JSONs</strong> based on agent-role mapping</div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-content">Load <strong>per-user context</strong> if applicable (xChat: wallet lookup → user file)</div>
+        </div>
+        <div class="step">
+          <div class="step-num">6</div>
+          <div class="step-content">Return <strong>structured context block</strong> → merged into system prompt pre-inference</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:20px">Agent → Shared Brain Mapping</h3>
+      <div class="agent-map">
+        <div class="agent-card">
+          <div class="agent-id">theo-main</div>
+          <div class="agent-desc">Main Telegram/DM agent</div>
+          <div class="agent-files">
+            <span class="agent-file">intel-feed.json</span>
+            <span class="agent-file">agent-handoffs.json</span>
+            <span class="agent-file">x1-ecosystem-state.json</span>
+          </div>
+        </div>
+        <div class="agent-card">
+          <div class="agent-id">theo-xchat</div>
+          <div class="agent-desc">xChat E2E encrypted agent</div>
+          <div class="agent-files">
+            <span class="agent-file">xchat-handoffs.json</span>
+            <span class="agent-file">outreach-log.json</span>
+            <span class="agent-file">x1-ecosystem-state.json</span>
+          </div>
+        </div>
+        <div class="agent-card">
+          <div class="agent-id">cyberdyne-director</div>
+          <div class="agent-desc">Cyberdyne group sessions</div>
+          <div class="agent-files">
+            <span class="agent-file">cyberdyne-pulse.json</span>
+            <span class="agent-file">intel-feed.json</span>
+            <span class="agent-file">agent-handoffs.json</span>
+          </div>
+        </div>
+        <div class="agent-card">
+          <div class="agent-id">vero-watcher</div>
+          <div class="agent-desc">Vero markets cron</div>
+          <div class="agent-files">
+            <span class="agent-file">x1-ecosystem-state.json</span>
+          </div>
+        </div>
+        <div class="agent-card">
+          <div class="agent-id">x1-token-sync</div>
+          <div class="agent-desc">Token DB hourly cron</div>
+          <div class="agent-files">
+            <span class="agent-file">x1-ecosystem-state.json ✍️</span>
+          </div>
+        </div>
+        <div class="agent-card">
+          <div class="agent-id">x-scanner</div>
+          <div class="agent-desc">X/Twitter intel cron (2h)</div>
+          <div class="agent-files">
+            <span class="agent-file">intel-feed.json ✍️</span>
+            <span class="agent-file">content-vault.json</span>
+          </div>
+        </div>
+      </div>
+
+      <p style="margin-top:16px; font-size:12px"><strong>Integration:</strong> <code>session_recall.py</code> handles identity graph lookups (focal trust, CAST). <code>boot_agent.py</code> handles operational context. They run sequentially — recall first, boot second — merged into one pre-inference context block.</p>
+    </div>
+  </section>
+
+  <!-- Write Protocol -->
+  <section id="protocol">
+    <h2><span class="section-num">6</span> Write Protocol</h2>
+    <p>Architecture is only as good as the discipline enforcing it. These rules live in <code>AGENTS.md</code> for all agents.</p>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px">
+      <div class="layer-card">
+        <h3>After Every Meaningful Task</h3>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-content">Append to <code>memory/agents/{agent-id}/YYYY-MM-DD.md</code></div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-content">Update relevant <code>shared-brain/*.json</code> files</div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-content">Cross-agent handoff needed? → append to <code>agent-handoffs.json</code></div></div>
+        </div>
+      </div>
+      <div class="layer-card">
+        <h3>Before Every Task</h3>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-content"><code>boot_agent.py</code> has already injected context (automatic)</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-content">Task involves a person? → check <code>crm.db</code> or xchat user file</div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-content">X1 ecosystem question? → check <code>x1-ecosystem-state.json</code></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="layer-card" style="margin-top:16px">
+      <h3>Write Guard Rules</h3>
+      <ul style="list-style:none; display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px">
+        <li style="font-size:13px; color:var(--text-muted); padding:8px 12px; background:var(--surface2); border-radius:6px">🔒 Never write private keys or personal info to shared brain</li>
+        <li style="font-size:13px; color:var(--text-muted); padding:8px 12px; background:var(--surface2); border-radius:6px">👁️ shared-brain/ files readable by all agents — treat as semi-public</li>
+        <li style="font-size:13px; color:var(--text-muted); padding:8px 12px; background:var(--surface2); border-radius:6px">🔐 Per-agent memory dirs are private to that agent</li>
+        <li style="font-size:13px; color:var(--text-muted); padding:8px 12px; background:var(--surface2); border-radius:6px">⛔ xchat-handoffs.json has wallet addresses — never expose outside xchat workspace</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Open Questions -->
+  <section id="questions">
+    <h2><span class="section-num">7</span> Open Questions</h2>
+    <div class="questions">
+      <div class="question">
+        <div>
+          <div class="q-text">Who owns <code>intel-feed.json</code>?</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:4px">New dedicated cron vs. repurpose heartbeat</div>
+        </div>
+        <div class="q-rec">New cron, every 2h, lightweight theobird scan</div>
+      </div>
+      <div class="question">
+        <div>
+          <div class="q-text">xChat per-wallet context location?</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:4px">Stay in workspace-xchat/memory/users/ vs. shared brain</div>
+        </div>
+        <div class="q-rec">Keep in xchat workspace — wallet addresses must stay scoped</div>
+      </div>
+      <div class="question">
+        <div>
+          <div class="q-text">LLM cost tracking source?</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:4px">Pull from session stats API vs. instrument per-agent</div>
+        </div>
+        <div class="q-rec">Start with session stats API (already available), instrument later</div>
+      </div>
+      <div class="question">
+        <div>
+          <div class="q-text">Boot script entry point?</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:4px">Modify session_recall.py vs. new boot_agent.py</div>
+        </div>
+        <div class="q-rec">New boot_agent.py — keep concerns separate</div>
+      </div>
+      <div class="question">
+        <div>
+          <div class="q-text">knowledge.db embedding backend?</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:4px">SQLite-vec vs. QMD</div>
+        </div>
+        <div class="q-rec">QMD — already running, don't duplicate the embedding infra</div>
+      </div>
+      <div class="question">
+        <div>
+          <div class="q-text">crm.db scope?</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:4px">xChat only vs. all channels</div>
+        </div>
+        <div class="q-rec">All channels — dedup contacts across Telegram, xChat, WhatsApp</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Phases -->
+  <section id="phases">
+    <h2><span class="section-num">8</span> Implementation Phases</h2>
+    <div class="phases">
+      <div class="phase p1">
+        <div class="phase-label">Phase 1</div>
+        <div class="phase-title">Foundation</div>
+        <ul>
+          <li>5 SQLite DBs with schemas</li>
+          <li>memory/agents/ dirs</li>
+          <li>shared-brain/ JSON stubs</li>
+          <li>boot_agent.py</li>
+          <li>write_agent_memory.py</li>
+        </ul>
+      </div>
+      <div class="phase p2">
+        <div class="phase-label">Phase 2</div>
+        <div class="phase-title">Agent Integration</div>
+        <ul>
+          <li>AGENTS.md write protocol</li>
+          <li>xchat AGENTS.md handoffs</li>
+          <li>HEARTBEAT.md updates</li>
+          <li>Cyberdyne pulse writes</li>
+        </ul>
+      </div>
+      <div class="phase p3">
+        <div class="phase-label">Phase 3</div>
+        <div class="phase-title">Intelligence Layer</div>
+        <ul>
+          <li>x_scanner.py (2h cron)</li>
+          <li>update_ecosystem_state.py</li>
+          <li>Cron job specs for review</li>
+          <li>social_analytics wiring</li>
+        </ul>
+      </div>
+      <div class="phase p4">
+        <div class="phase-label">Phase 4 · Future</div>
+        <div class="phase-title">CRM + Analytics</div>
+        <ul>
+          <li>Backfill crm.db from xChat</li>
+          <li>social_analytics backfill</li>
+          <li>LLM cost dashboard</li>
+          <li>Agent performance metrics</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cost -->
+  <section id="cost">
+    <h2><span class="section-num">9</span> Token Cost per Agent Boot</h2>
+    <div class="cost-card">
+      <div class="cost-item">
+        <div class="cost-value">~125</div>
+        <div class="cost-label">tokens · Agent Identity</div>
+      </div>
+      <div class="cost-divider"></div>
+      <div class="cost-item">
+        <div class="cost-value">~500</div>
+        <div class="cost-label">tokens · Last 2 Days Logs</div>
+      </div>
+      <div class="cost-divider"></div>
+      <div class="cost-item">
+        <div class="cost-value">~750</div>
+        <div class="cost-label">tokens · Shared Brain (2-3 files)</div>
+      </div>
+      <div class="cost-divider"></div>
+      <div class="cost-item">
+        <div class="cost-value">~1,375</div>
+        <div class="cost-label">tokens · Total per Boot</div>
+      </div>
+      <div class="cost-divider"></div>
+      <div class="cost-item">
+        <div class="cost-value" style="color:var(--accent4)">$0.004</div>
+        <div class="cost-label">per boot @ $3/M tokens (opus)</div>
+      </div>
+    </div>
+    <p style="margin-top:12px; font-size:13px">Negligible overhead. The real cost savings come from agents not repeating work they've already done.</p>
+  </section>
+
+  <!-- Summary -->
+  <section id="summary">
+    <h2><span class="section-num">10</span> Summary</h2>
+    <div class="summary-box">
+      <p>This is not a new system — it's a formalization of what we're already doing informally, with the gaps filled in. The xChat agent already writes per-wallet memory. Heartbeats already read daily logs. QMD already does semantic search.</p>
+      <p>What's missing: the <strong>discipline layer</strong> (shared brain protocol), the <strong>automation</strong> (boot script), and a few missing DBs (CRM, analytics, usage). Three opus subagent passes to wire it up cleanly.</p>
+      <p>The result: <strong>agents that don't forget, don't repeat themselves, and hand off context to each other without human intervention.</strong> That's the actual agentic era.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="footer">
+  Architecture by Theo · March 1, 2026 · <a href="persistent-agent-memory-architecture.md" style="color:var(--accent); text-decoration:none">View markdown source</a>
+</div>
+
+</body>
+</html>
