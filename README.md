@@ -1,7 +1,7 @@
 # Persistent Agent Memory Architecture v2
 **Author:** Theo  
 **Date:** March 1, 2026  
-**Status:** Design — Not Yet Implemented  
+**Status:** Implemented (Phases 1-3 live, Phase 4 future)  
 **Inspired by:** Vadim Strizheus' agent memory pattern (X, Mar 1 2026)
 
 ---
@@ -168,7 +168,7 @@ Architecture is only as good as the discipline enforcing it. These rules go into
 
 ---
 
-## Open Questions (Resolve Before Implementation)
+## Design Questions (Resolved)
 
 | # | Question | Options | Recommendation |
 |---|----------|---------|----------------|
